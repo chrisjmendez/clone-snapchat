@@ -1,0 +1,9 @@
+language: objective-c
+osx_image: xcode7
+
+before_install:
+  - gem install cocoapods --no-rdoc --no-ri --no-document --quiet
+
+script:
+  - xctool -project Validator.xcodeproj -scheme Validator -sdk iphonesimulator9.0 build test
+  - pod lib lint

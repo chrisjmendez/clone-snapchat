@@ -1,0 +1,8 @@
+github "Alamofire/AlamofireImage" ~> 2.0
+github "ankurp/Cent" ~> 5.0.0
+github "ankurp/Dollar" ~> 5.0.0
+github "BoltsFramework/Bolts-iOS" 
+github "duemunk/Async"
+github "jpotts18/SwiftValidator"
+github "jdg/MBProgressHUD" ~> 0.9.2
+github "ParsePlatform/Parse-SDK-iOS-OSX"
