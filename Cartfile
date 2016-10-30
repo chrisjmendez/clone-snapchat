@@ -2,7 +2,7 @@ github "Alamofire/AlamofireImage" ~> 3.1
 github "ankurp/Cent" 
 github "ankurp/Dollar"
 github "BoltsFramework/Bolts-iOS" 
-github "duemunk/Async" "feature/Swift_3.0"
+github "duemunk/Async" "2.0.0"
 github "jpotts18/SwiftValidator"
 github "jdg/MBProgressHUD" ~> 0.9.2
 github "ParsePlatform/Parse-SDK-iOS-OSX"
