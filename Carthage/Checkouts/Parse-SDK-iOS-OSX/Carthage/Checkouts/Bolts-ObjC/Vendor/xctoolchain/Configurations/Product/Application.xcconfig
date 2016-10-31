@@ -7,8 +7,10 @@
 // of patent rights can be found in the PATENTS file in the same directory.
 //
 
-LD_RUNPATH_SEARCH_PATHS = @executable_path/Frameworks
+// Whether to strip out code that isn't called from anywhere
+DEAD_CODE_STRIPPING = NO
 
 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
 ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage
-CLANG_ENABLE_MODULES = YES
+
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @loader_path/Frameworks @executable_path/Frameworks

@@ -16,7 +16,7 @@ public class FloatRule:Rule {
     private var message : String
     
     /**
-     Initializes a `FloatRule` object to validate that the text of a text field is a floating point number.
+     Initializes a `FloatRule` object to validate that the text of a field is a floating point number.
      
      - parameter message: String of error message.
      - returns: An initialized object, or nil if an object could not be created for some reason that would not result in an exception.
@@ -26,22 +26,22 @@ public class FloatRule:Rule {
     }
     
     /**
-     Used to validate text field.
+     Used to validate field.
      
      - parameter value: String to checked for validation.
      - returns: Boolean value. True if validation is successful; False if validation fails.
      */
-    public func validate(value: String) -> Bool {
+    public func validate(_ value: String) -> Bool {
         let regex = try? NSRegularExpression(pattern: "^[-+]?(\\d*[.])?\\d+$", options: [])
         if let regex = regex {
-            let match = regex.numberOfMatchesInString(value, options: [], range: NSRange(location: 0, length: value.characters.count))
+            let match = regex.numberOfMatches(in: value, options: [], range: NSRange(location: 0, length: value.characters.count))
             return match == 1
         }
         return false
     }
     
     /**
-     Displays error message when text field fails validation.
+     Displays error message when field fails validation.
      
      - returns: String of error message.
      */

@@ -118,6 +118,13 @@ typedef NSString TypedefString;
 }
 
 
+- (void)testCanMockNSMutableArray
+{
+    id mock = [OCMockObject niceMockForClass:[NSMutableArray class]];
+    id anArray = [[NSMutableArray alloc] init];
+}
+
+
 - (void)testForwardsIsKindOfClass
 {
     id mock = [OCMockObject mockForClass:[NSString class]];
@@ -166,6 +173,18 @@ typedef NSString TypedefString;
 {
     id mock = [OCMockObject mockForClass:[NSString class]];
     XCTAssertThrowsSpecificNamed([mock performSelector:@selector(sortedArrayHint)], NSException, NSInvalidArgumentException);
+}
+
+- (void)testComplainsWhenAttemptIsMadeToStubInitMethod
+{
+    id mock = [OCMockObject mockForClass:[NSString class]];
+    XCTAssertThrows([[[mock stub] init] andReturn:nil]);
+}
+
+- (void)testComplainsWhenAttemptIsMadeToStubInitMethodViaMacro
+{
+    id mock = [OCMockObject mockForClass:[NSString class]];
+    XCTAssertThrows(OCMStub([mock init]));
 }
 
 

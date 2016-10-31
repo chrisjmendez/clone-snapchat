@@ -1,10 +1,10 @@
-Dollar [![Build Status](https://travis-ci.org/ankurp/Dollar.swift.svg?branch=master)](https://travis-ci.org/ankurp/Dollar.swift) ![CocoaPods](https://img.shields.io/cocoapods/v/Dollar.svg) [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
+Dollar [![Build Status](https://travis-ci.org/ankurp/Dollar.svg)](https://travis-ci.org/ankurp/Dollar) ![CocoaPods](https://img.shields.io/cocoapods/v/Dollar.svg) [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 ===========
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ankurp/Dollar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Dollar is a Swift library that provides useful functional programming helper methods without extending any built in objects. It is similar to [Lo-Dash](https://lodash.com) or [Underscore.js](http://underscorejs.org) in Javascript.
 
-Cent is a library that extends certain Swift object types using the extension feature and gives its two cents to Swift language. It is now moved into a seperate repo to support `carthage` and upcoming `Swift Package Manager`
+[Cent](https://github.com/ankurp/Cent) is a library that extends certain Swift object types using the extension feature and gives its two cents to Swift language. It is now moved into a separate repo to support `carthage` and upcoming `Swift Package Manager`
 
 ## Contents ##
 
@@ -18,18 +18,20 @@ Cent is a library that extends certain Swift object types using the extension fe
   - [Function](#function)
   - [Chaining](#chaining)
 - [Contributing](#contributing)
-- [Roadmap](#roadmap)
-- [Dollar or Cent?](#dollar-or-cent)
 
 # Setup #
 
 ## Using [Carthage](https://github.com/Carthage/Carthage)
 
-Add `github "ankurp/Dollar.swift" ~> 4.1.0` to your `Cartfile` and run `carthage update`. If unfamiliar with Carthage then checkout their [Getting Started section](https://github.com/Carthage/Carthage#getting-started) or this [sample app](https://github.com/ankurp/DollarCarthageApp)
+Add `github "ankurp/Dollar" ~> 5.2.0` to your `Cartfile` and run `carthage update`. If unfamiliar with Carthage then checkout their [Getting Started section](https://github.com/Carthage/Carthage#getting-started) or this [sample app](https://github.com/ankurp/DollarCarthageApp)
 
 ## Using [cocoapods](http://cocoapods.org/) version 0.36.x or greater
 
 Add `pod 'Dollar'` to your `Podfile` and run `pod install`. Add `use_frameworks!` to the end of the `Podfile`. Also checkout this [sample app](https://github.com/ankurp/DollarPodApp). Requires cocoapod version 0.36.x or greater.
+
+## Using [Swift Package Manager](https://github.com/apple/swift-package-manager)
+
+Add the following dependency `.Package(url: "https://github.com/ankurp/Dollar", majorVersion: 5, minor: 2)` to your `Package.swift` file and then run `swift build`. Requires swift version 2.2 or greater that you can install from https://swift.org
 
 ## Using `git submodule`
 
@@ -42,20 +44,23 @@ Add `pod 'Dollar'` to your `Podfile` and run `pod install`. Add `use_frameworks!
 
 Still stuck. Then checkout this screencast on [how to import](http://recordit.co/0gQiCSEREF)
 
-## Support for Older Xcode and Swift
+## Support for Xcode and Swift
 
+* For Xcode 8 (Swift 3) user version `6.0.0`
+* For Xcode 7 (Swift 2) use version `4.1.0` or `5.2.0`
 * For Xcode 6.3 (Swift 1.2) use version `3.0.3`
 * For Xcode 6.1 and 6.2 (Swift 1.1) use version `2.2.0`
 
 ## Demo Apps ##
-Using
-* [`carthage`](https://github.com/ankurp/DollarCarthageApp)
-* [`cocoapods`](https://github.com/ankurp/DollarPodApp)
-* [`git submodule`](https://github.com/ankurp/DollarSubmoduleApp)
+
+* Using [`Carthage`](https://github.com/ankurp/DollarCarthageApp)
+* Using [`Cocoa Pods`](https://github.com/ankurp/DollarPodApp)
+* Using [`Swift Package Manager`](https://github.com/ankurp/DollarSwiftPackage)
+* Using [`git submodule`](https://github.com/ankurp/DollarSubmoduleApp)
 
 ## Communication ##
 
-- If you **need help**, use [gitter.im](https://gitter.im/ankurp/Dollar) or post a question on [Stack Overflow](http://stackoverflow.com/questions/tagged/dollar.swift) with tag 'dollar.swift.
+- If you **need help**, use [gitter.im](https://gitter.im/ankurp/Dollar) or post a question on [Stack Overflow](http://stackoverflow.com/questions/tagged/dollar.swift) with tag `dollar.swift`.
 - If you'd like to **ask a general question**, use [Stack Overflow](http://stackoverflow.com/questions/tagged/dollar.swift).
 - If you **found a bug**, open an issue.
 - If you **have a feature request**, open an issue.
@@ -144,7 +149,7 @@ $.each(["A", "B"]) {
 $.each(["A", "B"]) { (index, elem) in
   print("\(index) - \(elem)")
 }
-=> ["A", "B"]
+=> ["0 - A", "1 - B"]
 ```
 
 ### every - `$.every`
@@ -247,6 +252,17 @@ $.first([1, 2, 3, 4])
 
 $.first([]) 
 => nil
+```
+### groupBy `$.groupBy`
+
+This method returns a dictionary of values grouped by the value returned by a callback.
+
+``` swift
+$.groupBy([1, 2, 3, 4, 5], callback: {$0 % 2})
+=> [0: [2, 4], 1: [1, 3]]
+
+$.groupBy(["strings", "with", "different", lengths"], callback: {$0.characters.count})
+=> [7: ["strings", "lengths"], 9: ["different"], 4: ["With"]]
 ```
 
 ### second - `$.second(array: AnyObject[])`
@@ -586,7 +602,7 @@ result
 Returns size of the array
 
 ```swift
-_.size(["a", "b", "c")
+$.size(["a", "b", "c")
 => 3
 ```
 
@@ -600,6 +616,15 @@ $.sortedIndex([3, 4, 6, 10], value: 5)
 
 $.sortedIndex([10, 20, 30, 50], value: 40)
 => 3
+```
+
+### transpose - `$.transpose`
+
+Creates a tranposed matrix.
+
+```swift
+$.transpose([[1, 2, 3], [4, 5, 6]])
+=> [[1, 4], [2, 5], [3, 6]]
 ```
 
 ### union - `$.union`
@@ -766,7 +791,7 @@ $.pick(["Dog": 1, "Cat": 2, "Cow": 3], keys: "Dog", "Cow")
 Creates a shallow clone of a dictionary excluding the specified keys.
 
 ```swift
-$.omit(["Dog": 1, "Cat": 2, "Cow": 3], keys: "Cat", "Dog")
+$.omit(["Dog": 1, "Cat": 2, "Cow": 3, "Sheep": 4], keys: "Cat", "Dog")
 => ["Cow": 3, "Sheep": 4]
 ```
 
@@ -810,11 +835,19 @@ isDone
 Creates a function that, when called, invokes func with the binding of arguments provided.
 
 ```swift
-let helloWorldFunc = $.bind({(T...) in 
+var helloWorldFunc = $.bind({(T...) in
   T[0] + " " + T[1] + " from " + T[2] 
 }, "Hello", "World", "Swift")
 helloWorldFunc() 
 => "Hello World from Swift"
+
+helloWorldFunc = $.bind({ $0 + " World" }, "Hello")
+helloWorldFunc()
+=> "Hello World"
+
+helloWorldFunc = $.bind({ $0 + $1 + " World" }, "Hello ", "Great")
+helloWorldFunc()
+=> "Hello Great World"
 ```
 
 ### compose - `$.compose`
@@ -1596,7 +1629,7 @@ Prints "HiHiHi"
 Invoke the callback from int down to and including limit
 
 ```swift
-3.upTo(0) {
+3.downTo(0) {
   print("Hi")
 }
 Prints "HiHiHiHi"
@@ -1739,7 +1772,7 @@ Get an array from string split using the delimiter character
 => ["Hello", "World"]
 ```
 
-### `lstring() -> String`
+### `lstrip() -> String`
 
 Get string without leading spaces
 
@@ -1749,7 +1782,7 @@ leadingSpace.lstrip()
 => "Hello"
 ```
 
-### `rstring() -> String`
+### `rstrip() -> String`
 
 Get string without trailing spaces
 
@@ -1842,11 +1875,3 @@ For each index in the range invoke the callback
 
 # Contributing #
 If you are interested in contributing checkout [CONTRIBUTING.md](https://github.com/ankurp/Dollar/blob/master/CONTRIBUTING.md)
-
-# Roadmap #
-
-* Add more extention functions to the Cent library
-* Benchmark and improve performance if applicable
-
-# Dollar or Cent #
-If you are interested only in pure functional programming `import Dollar` otherwise `import Cent` which includes extensions for certain object type such as Array for now but more will be added.

@@ -9,49 +9,51 @@
 import Foundation
 import Dollar
 
-let RegexEscapePattern = "[\\-\\[\\]\\/\\{\\}\\(\\)\\*\\+\\?\\.\\\\\\^\\$\\|]"
-let RegexPatternRegex = Regex(RegexEscapePattern)
-
 public class Regex {
-    
+
     let expression: NSRegularExpression
     let pattern: String
-    
+
+    static let RegexEscapePattern = "[\\-\\[\\]\\/\\{\\}\\(\\)\\*\\+\\?\\.\\\\\\^\\$\\|]"
+    static let RegexPatternRegex = Regex(RegexEscapePattern)
+
     public init(_ pattern: String) {
         self.pattern = pattern
-        self.expression = try! NSRegularExpression(pattern: pattern, options: .CaseInsensitive)
+        self.expression = try! NSRegularExpression(pattern: pattern, options: .caseInsensitive)
     }
-    
+
     public func matches(testStr: String) -> [AnyObject] {
-        let matches = self.expression.matchesInString(testStr, options: [], range:NSMakeRange(0, testStr.characters.count))
+        let matches = self.expression.matches(in: testStr, options: [], range:NSMakeRange(0, testStr.characters.count))
         return matches
     }
-    
+
     public func rangeOfFirstMatch(testStr: String) -> NSRange {
-        return self.expression.rangeOfFirstMatchInString(testStr, options: [], range:NSMakeRange(0, testStr.characters.count))
+        return self.expression.rangeOfFirstMatch(in: testStr, options: [], range:NSMakeRange(0, testStr.characters.count))
     }
-    
+
     public func test(testStr: String) -> Bool {
-        let matches = self.matches(testStr)
+        let matches = self.matches(testStr: testStr)
         return matches.count > 0
     }
-    
+
     public class func escapeStr(str: String) -> String {
-        let matches = RegexPatternRegex.matches(str)
+        let matches = RegexPatternRegex.matches(testStr: str)
         var charArr = [Character](str.characters)
         var strBuilder = [Character]()
         var i = 0
         for match in matches {
             let range = match.range
-            while i < range.location + range.length {
-                if i == range.location {
-                    strBuilder << "\\"
+            while i < (range?.location)! + (range?.length)! {
+                if i == range?.location {
+                    _ = strBuilder << "\\"
                 }
-                strBuilder << charArr[i++]
+                _ = strBuilder << charArr[i]
+                i += 1
             }
         }
         while i < charArr.count {
-            strBuilder << charArr[i++]
+            _ = strBuilder << charArr[i]
+            i += 1
         }
         return String(strBuilder)
     }
@@ -59,7 +61,7 @@ public class Regex {
 
 /// Useful regex patterns (mapped from lodash)
 struct RegexHelper {
-  
+
     /// Unicode character classes
     static let astralRange = "\\ud800-\\udfff"
     static let comboRange = "\\u0300-\\u036f\\ufe20-\\ufe23"
@@ -72,7 +74,7 @@ struct RegexHelper {
     static let upperRange = "A-Z\\xc0-\\xd6\\xd8-\\xde"
     static let varRange = "\\ufe0e\\ufe0f"
     static let breakRange = mathOpRange + nonCharRange + quoteRange + spaceRange
-  
+
     /// Unicode capture groups
     static let astral = "[" + astralRange + "]"
     static let breakGroup = "[" + breakRange + "]"
@@ -87,30 +89,36 @@ struct RegexHelper {
     static let surrPair = "[\\ud800-\\udbff][\\udc00-\\udfff]"
     static let upper = "[" + upperRange + "]"
     static let ZWJ = "\\u200d"
-  
+
     /// Unicode regex composers
     static let lowerMisc = "(?:" + lower + "|" + misc + ")"
     static let upperMisc = "(?:" + upper + "|" + misc + ")"
     static let optMod = modifier + "?"
     static let optVar = "[" + varRange + "]"
-    static let optJoin = "(?:" + ZWJ + "(?:" + [nonAstral, regional, surrPair].joinWithSeparator("|") + ")" + optVar + optMod + ")*"
+    static let optJoin = "(?:" + ZWJ + "(?:" + [nonAstral, regional, surrPair].joined(separator: "|") + ")" + optVar + optMod + ")*"
     static let seq = optVar + optMod + optJoin
-    static let emoji = "(?:" + [dingbat, regional, surrPair].joinWithSeparator("|") + ")" + seq
-    static let symbol = "(?:" + [nonAstral + combo + "?", combo, regional, surrPair, astral].joinWithSeparator("|") + ")"
-  
+    static let emoji = "(?:" + [dingbat, regional, surrPair].joined(separator: "|") + ")" + seq
+    static let symbol = "(?:" + [nonAstral + combo + "?", combo, regional, surrPair, astral].joined(separator: "|") + ")"
+
     /// Match non-compound words composed of alphanumeric characters
     static let basicWord = "[a-zA-Z0-9]+"
-  
+
+    private static let word1 = upper + "?" + lower + "+(?=" + [breakGroup, upper, "$"].joined(separator: "|") + ")"
+    private static let word2 = upperMisc + "+(?=" + [breakGroup, upper + lowerMisc, "$"].joined(separator: "|") + ")"
+    private static let word3 = upper + "?" + lowerMisc + "+"
+    private static let word4 = digits + "(?:" + lowerMisc + "+)?"
+    private static let word5 = emoji
+
     /// Match complex or compound words
     static let complexWord = [
-      upper + "?" + lower + "+(?=" + [breakGroup, upper, "$"].joinWithSeparator("|") + ")",
-      upperMisc + "+(?=" + [breakGroup, upper + lowerMisc, "$"].joinWithSeparator("|") + ")",
-      upper + "?" + lowerMisc + "+",
-      digits + "(?:" + lowerMisc + "+)?",
-      emoji
-    ].joinWithSeparator("|")
-  
+      word1,
+      word2,
+      word3,
+      word4,
+      word5
+    ].joined(separator: "|")
+
     /// Detect strings that need a more robust regexp to match words
     static let hasComplexWord = "[a-z][A-Z]|[0-9][a-zA-Z]|[a-zA-Z][0-9]|[^a-zA-Z0-9 ]"
-  
+
 }

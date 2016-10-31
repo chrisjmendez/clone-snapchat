@@ -9,51 +9,50 @@
 import Foundation
 
 public extension NSDate {
-    
+
     /// Returns a new Date given the year month and day
     ///
-    /// :param year
-    /// :param month
-    /// :param day
-    /// :return Date
-    public class func from(year year: Int, month: Int, day: Int) -> NSDate? {
-        let c = NSDateComponents()
-        c.year = year
-        c.month = month
-        c.day = day
-        
-        if let gregorian = NSCalendar(identifier: NSCalendarIdentifierGregorian) {
-            return gregorian.dateFromComponents(c)
+    /// - parameter year:
+    /// - parameter month:
+    /// - parameter day:
+    /// - returns: Date
+    public class func from(year: Int, month: Int, day: Int) -> NSDate? {
+        //   public init(calendar: Calendar? = default, timeZone: TimeZone? = default, era: Int? = default, year: Int? = default, month: Int? = default, day: Int? = default, hour: Int? = default, minute: Int? = default, second: Int? = default, nanosecond: Int? = default, weekday: Int? = default, weekdayOrdinal: Int? = default, quarter: Int? = default, weekOfMonth: Int? = default, weekOfYear: Int? = default, yearForWeekOfYear: Int? = default)
+        let c = DateComponents(calendar: nil, timeZone: nil, era: nil, year: year, month: month, day: day)
+
+        if let gregorian = NSCalendar(identifier: NSCalendar.Identifier.gregorian) {
+            return gregorian.date(from: c) as NSDate?
         } else {
-            return .None
+            return .none
         }
     }
 
     /// Returns a new Date given the unix timestamp
     ///
-    /// :param unix timestamp
-    /// :return Date
-    public class func from(unix unix: Double) -> NSDate {
+    /// - parameter unix: timestamp
+    /// - returns: Date
+    public class func from(unix: Double) -> NSDate {
         return NSDate(timeIntervalSince1970: unix)
     }
 
     /// Parses the date based on the format and return a new Date
     ///
-    /// :param dateStr String version of the date
-    /// :param format By default it is year month day
-    /// :return Date
+    /// - parameter dateStr: String version of the date
+    /// - parameter format: By default it is year month day
+    /// - returns: Date
     public class func parse(dateStr: String, format: String = "yyyy-MM-dd") -> NSDate {
-        let dateFmt = NSDateFormatter()
-        dateFmt.timeZone = NSTimeZone.defaultTimeZone()
+        let dateFmt = DateFormatter()
+        dateFmt.timeZone = NSTimeZone.default
         dateFmt.dateFormat = format
-        return dateFmt.dateFromString(dateStr)!
+        dateFmt.calendar = NSCalendar(calendarIdentifier: NSCalendar.Identifier.ISO8601) as Calendar!
+        return dateFmt.date(from: dateStr)! as NSDate
     }
-    
+
     /// Returns the unix timestamp of the date passed in or
     /// the current unix timestamp
     ///
-    /// :param date
-    /// :return Double
+    /// - parameter date:
+    /// - returns: Double
     public class func unix(date: NSDate = NSDate()) -> Double {
        return date.timeIntervalSince1970 as Double
     }

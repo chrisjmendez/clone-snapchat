@@ -18,18 +18,48 @@
 @implementation TaskTests
 
 - (void)testBasicOnSuccess {
-    [[[BFTask taskWithResult:@"foo"] continueWithSuccessBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"foo", task.result);
+    [[[BFTask taskWithResult:@"foo"] continueWithSuccessBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"foo", t.result);
         return nil;
     }] waitUntilFinished];
+}
+
+- (void)testBasicOnSuccessWithExecutor {
+    __block BOOL completed = NO;
+    BFTask *task = [[BFTask taskWithDelay:100] continueWithExecutor:[BFExecutor immediateExecutor]
+                                                   withSuccessBlock:^id _Nullable(BFTask * _Nonnull _) {
+                                                       completed = YES;
+                                                       return nil;
+                                                   }];
+    [task waitUntilFinished];
+    XCTAssertTrue(completed);
+    XCTAssertTrue(task.completed);
+    XCTAssertFalse(task.faulted);
+    XCTAssertFalse(task.cancelled);
+    XCTAssertNil(task.result);
 }
 
 - (void)testBasicOnSuccessWithToken {
     BFCancellationTokenSource *cts = [BFCancellationTokenSource cancellationTokenSource];
     BFTask *task = [BFTask taskWithDelay:100];
 
+    task = [task continueWithSuccessBlock:^id(BFTask *t) {
+        XCTFail(@"Success block should not be triggered");
+        return nil;
+    } cancellationToken:cts.token];
+
+    [cts cancel];
+    [task waitUntilFinished];
+
+    XCTAssertTrue(task.cancelled);
+}
+
+- (void)testBasicOnSuccessWithExecutorToken {
+    BFCancellationTokenSource *cts = [BFCancellationTokenSource cancellationTokenSource];
+    BFTask *task = [BFTask taskWithDelay:100];
+
     task = [task continueWithExecutor:[BFExecutor immediateExecutor]
-                         successBlock:^id(BFTask *task) {
+                         successBlock:^id(BFTask *t) {
                              XCTFail(@"Success block should not be triggered");
                              return nil;
                          }
@@ -38,7 +68,7 @@
     [cts cancel];
     [task waitUntilFinished];
 
-    XCTAssertTrue(task.isCancelled);
+    XCTAssertTrue(task.cancelled);
 }
 
 - (void)testBasicOnSuccessWithCancelledToken {
@@ -48,7 +78,7 @@
     [cts cancel];
 
     task = [task continueWithExecutor:[BFExecutor immediateExecutor]
-                         successBlock:^id(BFTask *task) {
+                         successBlock:^id(BFTask *t) {
                              XCTFail(@"Success block should not be triggered");
                              return nil;
                          }
@@ -59,21 +89,24 @@
 
 - (void)testBasicContinueWithError {
     NSError *originalError = [NSError errorWithDomain:@"Bolts" code:22 userInfo:nil];
-    [[[BFTask taskWithError:originalError] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error, @"Task should have failed.");
-        XCTAssertEqual((NSInteger)22, task.error.code);
+    [[[BFTask taskWithError:originalError] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error, @"Task should have failed.");
+        XCTAssertEqual((NSInteger)22, t.error.code);
         return nil;
     }] waitUntilFinished];
 }
 
 - (void)testBasicContinueWithException {
     NSString *message = @"This is expected.";
-    [[[[BFTask taskWithResult:nil] continueWithBlock:^id(BFTask *task) {
+    [[[[BFTask taskWithResult:nil] continueWithBlock:^id(BFTask *t) {
         [NSException raise:NSInternalInconsistencyException format:message];
         return nil;
-    }] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.exception, @"Task should have failed.");
-        XCTAssertEqualObjects(message, task.exception.description);
+    }] continueWithBlock:^id(BFTask *t) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        XCTAssertNotNil(t.exception, @"Task should have failed.");
+        XCTAssertEqualObjects(message, t.exception.description);
+#pragma clang diagnostic pop
         return nil;
     }] waitUntilFinished];
 }
@@ -83,7 +116,7 @@
     BFTask *task = [BFTask taskWithDelay:100];
 
     task = [task continueWithExecutor:[BFExecutor immediateExecutor]
-                                block:^id(BFTask *task) {
+                                block:^id(BFTask *t) {
                                     XCTFail(@"Continuation block should not be triggered");
                                     return nil;
                                 }
@@ -102,7 +135,7 @@
     [cts cancel];
 
     task = [task continueWithExecutor:[BFExecutor immediateExecutor]
-                                block:^id(BFTask *task) {
+                                block:^id(BFTask *t) {
                                     XCTFail(@"Continuation block should not be triggered");
                                     return nil;
                                 }
@@ -113,11 +146,11 @@
 
 - (void)testFinishLaterWithSuccess {
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [tcs.task continueWithBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"bar", task.result);
+    BFTask *task = [tcs.task continueWithBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"bar", t.result);
         return nil;
     }];
-    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *task) {
+    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *t) {
         tcs.result = @"bar";
         return nil;
     }];
@@ -126,12 +159,12 @@
 
 - (void)testFinishLaterWithError {
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [tcs.task continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertEqual((NSInteger)23, task.error.code);
+    BFTask *task = [tcs.task continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertEqual((NSInteger)23, t.error.code);
         return nil;
     }];
-    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *task) {
+    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *t) {
         tcs.error = [NSError errorWithDomain:@"Bolts" code:23 userInfo:nil];
         return nil;
     }];
@@ -141,27 +174,30 @@
 - (void)testFinishLaterWithException {
     NSString *message = @"This is expected.";
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [tcs.task continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.exception, @"Task should have failed.");
-        XCTAssertEqualObjects(message, task.exception.description);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    BFTask *task = [tcs.task continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.exception, @"Task should have failed.");
+        XCTAssertEqualObjects(message, t.exception.description);
         return nil;
     }];
     [tcs setException:[NSException exceptionWithName:NSInternalInconsistencyException
                                               reason:message
                                             userInfo:nil]];
+#pragma clang diagnostic pop
     [task waitUntilFinished];
 }
 
 - (void)testTransformConstantToConstant {
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"foo", task.result);
+    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"foo", t.result);
         return @"bar";
-    }] continueWithBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"bar", task.result);
+    }] continueWithBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"bar", t.result);
         return nil;
     }];
-    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *task) {
+    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *t) {
         tcs.result = @"foo";
         return nil;
     }];
@@ -170,15 +206,15 @@
 
 - (void)testTransformErrorToConstant {
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertEqual((NSInteger)23, task.error.code);
+    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertEqual((NSInteger)23, t.error.code);
         return @"bar";
-    }] continueWithBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"bar", task.result);
+    }] continueWithBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"bar", t.result);
         return nil;
     }];
-    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *task) {
+    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *t) {
         tcs.error = [NSError errorWithDomain:@"Bolts" code:23 userInfo:nil];
         return nil;
     }];
@@ -187,14 +223,14 @@
 
 - (void)testReturnSuccessfulTaskFromContinuation {
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"foo", task.result);
+    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"foo", t.result);
         return [BFTask taskWithResult:@"bar"];
-    }] continueWithBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"bar", task.result);
+    }] continueWithBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"bar", t.result);
         return nil;
     }];
-    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *task) {
+    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *t) {
         tcs.result = @"foo";
         return nil;
     }];
@@ -203,15 +239,15 @@
 
 - (void)testReturnSuccessfulTaskFromContinuationAfterError {
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertEqual((NSInteger)23, task.error.code);
+    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertEqual((NSInteger)23, t.error.code);
         return [BFTask taskWithResult:@"bar"];
-    }] continueWithBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"bar", task.result);
+    }] continueWithBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"bar", t.result);
         return nil;
     }];
-    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *task) {
+    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *t) {
         tcs.error = [NSError errorWithDomain:@"Bolts" code:23 userInfo:nil];
         return nil;
     }];
@@ -220,16 +256,16 @@
 
 - (void)testReturnErrorTaskFromContinuation {
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"foo", task.result);
+    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"foo", t.result);
         NSError *originalError = [NSError errorWithDomain:@"Bolts" code:24 userInfo:nil];
         return [BFTask taskWithError:originalError];
-    }] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertEqual((NSInteger)24, task.error.code);
+    }] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertEqual((NSInteger)24, t.error.code);
         return nil;
     }];
-    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *task) {
+    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *t) {
         tcs.result = @"foo";
         return nil;
     }];
@@ -238,17 +274,17 @@
 
 - (void)testReturnErrorTaskFromContinuationAfterError {
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertEqual((NSInteger)23, task.error.code);
+    BFTask *task = [[tcs.task continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertEqual((NSInteger)23, t.error.code);
         NSError *originalError = [NSError errorWithDomain:@"Bolts" code:24 userInfo:nil];
         return [BFTask taskWithError:originalError];
-    }] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertEqual((NSInteger)24, task.error.code);
+    }] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertEqual((NSInteger)24, t.error.code);
         return nil;
     }];
-    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *task) {
+    [[BFTask taskWithDelay:0] continueWithBlock:^id(BFTask *t) {
         tcs.error = [NSError errorWithDomain:@"Bolts" code:23 userInfo:nil];
         return nil;
     }];
@@ -257,33 +293,33 @@
 
 - (void)testPassOnError {
     NSError *originalError = [NSError errorWithDomain:@"Bolts" code:30 userInfo:nil];
-    [[[[[[[[BFTask taskWithError:originalError] continueWithSuccessBlock:^id(BFTask *task) {
+    [[[[[[[[BFTask taskWithError:originalError] continueWithSuccessBlock:^id(BFTask *t) {
         XCTFail(@"This callback should be skipped.");
         return nil;
-    }] continueWithSuccessBlock:^id(BFTask *task) {
+    }] continueWithSuccessBlock:^id(BFTask *t) {
         XCTFail(@"This callback should be skipped.");
         return nil;
-    }] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertEqual((NSInteger)30, task.error.code);
+    }] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertEqual((NSInteger)30, t.error.code);
         NSError *newError = [NSError errorWithDomain:@"Bolts" code:31 userInfo:nil];
         return [BFTask taskWithError:newError];
-    }] continueWithSuccessBlock:^id(BFTask *task) {
+    }] continueWithSuccessBlock:^id(BFTask *t) {
         XCTFail(@"This callback should be skipped.");
         return nil;
-    }] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertEqual((NSInteger)31, task.error.code);
+    }] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertEqual((NSInteger)31, t.error.code);
         return [BFTask taskWithResult:@"okay"];
-    }] continueWithSuccessBlock:^id(BFTask *task) {
-        XCTAssertEqualObjects(@"okay", task.result);
+    }] continueWithSuccessBlock:^id(BFTask *t) {
+        XCTAssertEqualObjects(@"okay", t.result);
         return nil;
     }] waitUntilFinished];
 }
 
 - (void)testCancellation {
     BFTaskCompletionSource *tcs = [BFTaskCompletionSource taskCompletionSource];
-    BFTask *task = [[BFTask taskWithDelay:100] continueWithBlock:^id(BFTask *task) {
+    BFTask *task = [[BFTask taskWithDelay:100] continueWithBlock:^id(BFTask *t) {
         return tcs.task;
     }];
 
@@ -299,15 +335,18 @@
     const int kTaskCount = 20;
     for (int i = 0; i < kTaskCount; ++i) {
         double sleepTimeInMs = rand() % 100;
-        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *task) {
+        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *t) {
             return @(i);
         }]];
     }
 
-    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNil(task.error);
-        XCTAssertNil(task.exception);
-        XCTAssertFalse(task.isCancelled);
+    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNil(t.error);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        XCTAssertNil(t.exception);
+#pragma clang diagnostic pop
+        XCTAssertFalse(t.isCancelled);
 
         for (int i = 0; i < kTaskCount; ++i) {
             XCTAssertEqual(i, [((BFTask *)[tasks objectAtIndex:i]).result intValue]);
@@ -322,7 +361,7 @@
     const int kTaskCount = 20;
     for (int i = 0; i < kTaskCount; ++i) {
         double sleepTimeInMs = rand() % 100;
-        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *task) {
+        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *t) {
             if (i == 10) {
                 [NSException raise:@"TestException" format:@"This exception is expected."];
             }
@@ -330,12 +369,14 @@
         }]];
     }
 
-    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNil(task.error);
-        XCTAssertNotNil(task.exception);
-        XCTAssertFalse(task.isCancelled);
+    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNil(t.error);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        XCTAssertNotNil(t.exception);
+        XCTAssertFalse(t.isCancelled);
 
-        XCTAssertEqualObjects(@"TestException", task.exception.name);
+        XCTAssertEqualObjects(@"TestException", t.exception.name);
 
         for (int i = 0; i < kTaskCount; ++i) {
             if (i == 10) {
@@ -344,6 +385,7 @@
                 XCTAssertEqual(i, [((BFTask *)[tasks objectAtIndex:i]).result intValue]);
             }
         }
+#pragma clang diagnostic pop
         return nil;
     }] waitUntilFinished];
 }
@@ -354,7 +396,7 @@
     const int kTaskCount = 20;
     for (int i = 0; i < kTaskCount; ++i) {
         double sleepTimeInMs = rand() % 100;
-        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *task) {
+        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *t) {
             if (i == 10 || i == 11) {
                 [NSException raise:@"TestException" format:@"This exception is expected."];
             }
@@ -362,14 +404,16 @@
         }]];
     }
 
-    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNil(task.error);
-        XCTAssertNotNil(task.exception);
-        XCTAssertFalse(task.isCancelled);
+    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNil(t.error);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        XCTAssertNotNil(t.exception);
+        XCTAssertFalse(t.isCancelled);
 
-        XCTAssertEqualObjects(@"BFMultipleExceptionsException", task.exception.name);
+        XCTAssertEqualObjects(@"BFMultipleExceptionsException", t.exception.name);
 
-        NSArray *exceptions = [task.exception.userInfo objectForKey:@"exceptions"];
+        NSArray *exceptions = [t.exception.userInfo objectForKey:BFTaskMultipleExceptionsUserInfoKey];
         XCTAssertEqual(2, (int)exceptions.count);
         XCTAssertEqualObjects(@"TestException", [[exceptions objectAtIndex:0] name]);
         XCTAssertEqualObjects(@"TestException", [[exceptions objectAtIndex:1] name]);
@@ -381,6 +425,7 @@
                 XCTAssertEqual(i, [((BFTask *)[tasks objectAtIndex:i]).result intValue]);
             }
         }
+#pragma clang diagnostic pop
         return nil;
     }] waitUntilFinished];
 }
@@ -391,7 +436,7 @@
     const int kTaskCount = 20;
     for (int i = 0; i < kTaskCount; ++i) {
         double sleepTimeInMs = rand() % 100;
-        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *task) {
+        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *t) {
             if (i == 10) {
                 return [BFTask taskWithError:[NSError errorWithDomain:@"BoltsTests"
                                                                  code:35
@@ -401,13 +446,12 @@
         }]];
     }
 
-    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertNil(task.exception);
-        XCTAssertFalse(task.isCancelled);
+    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertFalse(t.isCancelled);
 
-        XCTAssertEqualObjects(@"BoltsTests", task.error.domain);
-        XCTAssertEqual(35, (int)task.error.code);
+        XCTAssertEqualObjects(@"BoltsTests", t.error.domain);
+        XCTAssertEqual(35, (int)t.error.code);
 
         for (int i = 0; i < kTaskCount; ++i) {
             if (i == 10) {
@@ -426,7 +470,7 @@
     const int kTaskCount = 20;
     for (int i = 0; i < kTaskCount; ++i) {
         double sleepTimeInMs = rand() % 100;
-        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *task) {
+        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *t) {
             if (i == 10 || i == 11) {
                 return [BFTask taskWithError:[NSError errorWithDomain:@"BoltsTests"
                                                                  code:35
@@ -436,15 +480,14 @@
         }]];
     }
 
-    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNotNil(task.error);
-        XCTAssertNil(task.exception);
-        XCTAssertFalse(task.isCancelled);
+    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNotNil(t.error);
+        XCTAssertFalse(t.isCancelled);
 
-        XCTAssertEqualObjects(@"bolts", task.error.domain);
-        XCTAssertEqual(kBFMultipleErrorsError, task.error.code);
+        XCTAssertEqualObjects(@"bolts", t.error.domain);
+        XCTAssertEqual(kBFMultipleErrorsError, t.error.code);
 
-        NSArray *errors = [task.error.userInfo objectForKey:@"errors"];
+        NSArray *errors = [t.error.userInfo objectForKey:BFTaskMultipleErrorsUserInfoKey];
         XCTAssertEqualObjects(@"BoltsTests", [[errors objectAtIndex:0] domain]);
         XCTAssertEqual(35, (int)[[errors objectAtIndex:0] code]);
         XCTAssertEqualObjects(@"BoltsTests", [[errors objectAtIndex:1] domain]);
@@ -467,7 +510,7 @@
     const int kTaskCount = 20;
     for (int i = 0; i < kTaskCount; ++i) {
         double sleepTimeInMs = rand() % 100;
-        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *task) {
+        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *t) {
             if (i == 10) {
                 return [BFTask cancelledTask];
             }
@@ -475,10 +518,9 @@
         }]];
     }
 
-    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *task) {
-        XCTAssertNil(task.error);
-        XCTAssertNil(task.exception);
-        XCTAssertTrue(task.isCancelled);
+    [[[BFTask taskForCompletionOfAllTasks:tasks] continueWithBlock:^id(BFTask *t) {
+        XCTAssertNil(t.error);
+        XCTAssertTrue(t.isCancelled);
 
         for (int i = 0; i < kTaskCount; ++i) {
             if (i == 10) {
@@ -507,16 +549,16 @@
     for (int i = 0; i < kTaskCount; ++i) {
         double sleepTimeInMs = i * 10;
         int result = i + 1;
-        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *task) {
+        [tasks addObject:[[BFTask taskWithDelay:(int)sleepTimeInMs] continueWithBlock:^id(BFTask *t) {
             return @(result);
         }]];
     }
 
-    [[[BFTask taskForCompletionOfAllTasksWithResults:tasks] continueWithBlock:^id(BFTask *task) {
-        XCTAssertFalse(task.cancelled);
-        XCTAssertFalse(task.faulted);
+    [[[BFTask taskForCompletionOfAllTasksWithResults:tasks] continueWithBlock:^id(BFTask *t) {
+        XCTAssertFalse(t.cancelled);
+        XCTAssertFalse(t.faulted);
 
-        NSArray *results = task.result;
+        NSArray *results = t.result;
         for (int i = 0; i < kTaskCount; ++i) {
             NSNumber *individualResult = [results objectAtIndex:i];
             XCTAssertEqual([individualResult intValue], [((BFTask *)[tasks objectAtIndex:i]).result intValue]);
@@ -536,6 +578,8 @@
 }
 
 - (void)testTaskForCompletionOfAllTasksExceptionCancelledSuccess {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSException *exception = [NSException exceptionWithName:@"" reason:@"" userInfo:nil];
     BFTask *exceptionTask = [BFTask taskWithException:exception];
     BFTask *cancelledTask = [BFTask cancelledTask];
@@ -546,9 +590,12 @@
     XCTAssertTrue(allTasks.faulted, @"Task should be faulted");
     XCTAssertNil(allTasks.error, @"Task shoud not have error");
     XCTAssertNotNil(allTasks.exception, @"Task should have exception");
+#pragma clang diagnostic pop
 }
 
 - (void)testTaskForCompletionOfAllTasksExceptionErrorCancelledSuccess {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     BFTask *errorTask = [BFTask taskWithError:[NSError new]];
     BFTask *exceptionTask = [BFTask taskWithException:[NSException new]];
     BFTask *cancelledTask = [BFTask cancelledTask];
@@ -559,6 +606,7 @@
     XCTAssertTrue(allTasks.faulted, @"Task should be faulted");
     XCTAssertNotNil(allTasks.error, @"Task should have error");
     XCTAssertNil(allTasks.exception, @"Task should not have exception");
+#pragma clang diagnostic pop
 }
 
 - (void)testTaskForCompletionOfAllTasksErrorCancelled {
@@ -588,6 +636,7 @@
     XCTAssertTrue(allTasks.faulted, @"Task should be faulted");
 }
 
+
 - (void)testTaskForCompletionOfAllTasksWithResultsNoTasksImmediateCompletion {
     NSMutableArray *tasks = [NSMutableArray array];
 
@@ -598,8 +647,84 @@
     XCTAssertTrue(task.result != nil);
 }
 
+- (void)testTasksForTaskForCompletionOfAnyTasksWithSuccess {
+    BFTask *task = [BFTask taskForCompletionOfAnyTask:@[[BFTask taskWithDelay:20], [BFTask taskWithResult:@"success"]]];
+    [task waitUntilFinished];
+    
+    XCTAssertEqualObjects(@"success", task.result);
+}
+
+- (void)testTasksForTaskForCompletionOfAnyTasksWithRacing {
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+
+    BFExecutor *executor = [BFExecutor executorWithDispatchQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];
+
+    BFTask *first = [BFTask taskFromExecutor:executor withBlock:^id _Nullable {
+        return @"first";
+    }];
+    BFTask *second = [BFTask taskFromExecutor:executor withBlock:^id _Nullable {
+        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+        return @"second";
+    }];
+
+    BFTask *task = [BFTask taskForCompletionOfAnyTask:@[first, second]];
+    [task waitUntilFinished];
+
+    dispatch_semaphore_signal(semaphore);
+    
+    XCTAssertEqualObjects(@"first", task.result);
+}
+
+- (void)testTasksForTaskForCompletionOfAnyTasksWithErrorAndSuccess {
+    NSError *error = [NSError errorWithDomain:@"BoltsTests"
+                                         code:35
+                                     userInfo:nil];
+    
+    BFTask *task = [BFTask taskForCompletionOfAnyTask:@[[BFTask taskWithError:error], [BFTask taskWithResult:@"success"]]];
+    [task waitUntilFinished];
+    
+    XCTAssertEqualObjects(@"success", task.result);
+    XCTAssertNil(task.error);
+}
+
+- (void)testTasksForTaskForCompletionOfAnyTasksWithError {
+    NSError *error = [NSError errorWithDomain:@"BoltsTests"
+                                         code:35
+                                     userInfo:nil];
+    
+    BFTask *task = [BFTask taskForCompletionOfAnyTask:@[[BFTask taskWithError:error]]];
+    [task waitUntilFinished];
+    
+    XCTAssertEqualObjects(error, task.error);
+    XCTAssertNotNil(task.error);
+}
+
+- (void)testTasksForTaskForCompletionOfAnyTasksWithNilArray {
+    BFTask *task = [BFTask taskForCompletionOfAnyTask:nil];
+    [task waitUntilFinished];
+    
+    XCTAssertNil(task.result);
+    XCTAssertNil(task.error);
+}
+
+- (void)testTasksForTaskForCompletionOfAnyTasksAllErrors {
+    NSError *error = [NSError errorWithDomain:@"BoltsTests"
+                                         code:35
+                                     userInfo:nil];
+    
+    BFTask *task = [BFTask taskForCompletionOfAnyTask:@[[BFTask taskWithError:error], [BFTask taskWithError:error]]];
+    [task waitUntilFinished];
+    
+    XCTAssertNil(task.result);
+    XCTAssertNotNil(task.error);
+    XCTAssertNotNil(task.error.userInfo);
+    XCTAssertEqualObjects(@"bolts", task.error.domain);
+    XCTAssertTrue([task.error.userInfo[@"errors"] isKindOfClass:[NSArray class]]);
+    XCTAssertEqual(2, [task.error.userInfo[@"errors"] count]);
+}
+
 - (void)testWaitUntilFinished {
-    BFTask *task = [[BFTask taskWithDelay:50] continueWithBlock:^id(BFTask *task) {
+    BFTask *task = [[BFTask taskWithDelay:50] continueWithBlock:^id(BFTask *t) {
         return @"foo";
     }];
 
@@ -633,7 +758,10 @@
     BFExecutor *queueExecutor = [BFExecutor executorWithDispatchQueue:queue];
 
     BFTask *task = [BFTask taskFromExecutor:queueExecutor withBlock:^id() {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         XCTAssertEqual(queue, dispatch_get_current_queue());
+#pragma clang diagnostic pop
         return @"foo";
     }];
     [task waitUntilFinished];
@@ -653,11 +781,11 @@
     BFCancellationTokenSource *cts = [BFCancellationTokenSource cancellationTokenSource];
 
     XCTestExpectation *expectation = [self expectationWithDescription:@"task"];
-    [[[BFTask taskWithDelay:1] continueWithBlock:^id(BFTask *task) {
+    [[[BFTask taskWithDelay:1] continueWithBlock:^id(BFTask *t) {
         [cts cancel];
         return [BFTask taskWithDelay:10];
-    } cancellationToken:cts.token] continueWithBlock:^id(BFTask *task) {
-        XCTAssertTrue(task.cancelled);
+    } cancellationToken:cts.token] continueWithBlock:^id(BFTask *t) {
+        XCTAssertTrue(t.cancelled);
         [expectation fulfill];
         return nil;
     }];
@@ -708,6 +836,8 @@
 - (void)testSetException {
     BFTaskCompletionSource *taskCompletionSource = [BFTaskCompletionSource taskCompletionSource];
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSException *exception = [NSException exceptionWithName:NSInvalidArgumentException reason:@"test" userInfo:nil];
     taskCompletionSource.exception = exception;
     XCTAssertThrowsSpecificNamed([taskCompletionSource setException:exception], NSException, NSInternalInconsistencyException);
@@ -715,11 +845,14 @@
     XCTAssertTrue(taskCompletionSource.task.completed);
     XCTAssertTrue(taskCompletionSource.task.faulted);
     XCTAssertEqualObjects(taskCompletionSource.task.exception, exception);
+#pragma clang diagnostic pop
 }
 
 - (void)testTrySetException {
     BFTaskCompletionSource *taskCompletionSource = [BFTaskCompletionSource taskCompletionSource];
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSException *exception = [NSException exceptionWithName:NSInvalidArgumentException reason:@"test" userInfo:nil];
     [taskCompletionSource trySetException:exception];
     [taskCompletionSource trySetException:exception];
@@ -727,6 +860,7 @@
     XCTAssertTrue(taskCompletionSource.task.completed);
     XCTAssertTrue(taskCompletionSource.task.faulted);
     XCTAssertEqualObjects(taskCompletionSource.task.exception, exception);
+#pragma clang diagnostic pop
 }
 
 - (void)testSetCancelled {
@@ -747,6 +881,45 @@
 
     XCTAssertTrue(taskCompletionSource.task.completed);
     XCTAssertTrue(taskCompletionSource.task.cancelled);
+}
+
+- (void)testMultipleWaitUntilFinished {
+    BFTask *task = [[BFTask taskWithDelay:50] continueWithBlock:^id(BFTask *t) {
+        return @"foo";
+    }];
+
+    [task waitUntilFinished];
+
+    XCTestExpectation *expectation = [self expectationWithDescription:NSStringFromSelector(_cmd)];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        [task waitUntilFinished];
+        [expectation fulfill];
+    });
+    [self waitForExpectationsWithTimeout:10.0 handler:nil];
+}
+
+- (void)testMultipleThreadsWaitUntilFinished {
+    BFTask *task = [[BFTask taskWithDelay:500] continueWithBlock:^id(BFTask *t) {
+        return @"foo";
+    }];
+
+    dispatch_queue_t queue = dispatch_queue_create("com.bolts.tests.wait", DISPATCH_QUEUE_CONCURRENT);
+    dispatch_group_t group = dispatch_group_create();
+
+    XCTestExpectation *expectation = [self expectationWithDescription:NSStringFromSelector(_cmd)];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        dispatch_group_async(group, queue, ^{
+            [task waitUntilFinished];
+        });
+        dispatch_group_async(group, queue, ^{
+            [task waitUntilFinished];
+        });
+        [task waitUntilFinished];
+
+        dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+        [expectation fulfill];
+    });
+    [self waitForExpectationsWithTimeout:10.0 handler:nil];
 }
 
 @end

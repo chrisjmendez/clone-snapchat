@@ -1,7 +1,7 @@
 SwiftValidator
 ===============
 
-[![Build Status](https://travis-ci.org/jpotts18/SwiftValidator.svg?branch=travis-ci)](https://travis-ci.org/jpotts18/SwiftValidator) [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
+[![Build Status](https://travis-ci.org/jpotts18/SwiftValidator.svg?branch=travis-ci)](https://travis-ci.org/jpotts18/SwiftValidator) [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage) [![codecov.io](https://codecov.io/github/jpotts18/SwiftValidator/coverage.svg?branch=master)](https://codecov.io/github/jpotts18/SwiftValidator?branch=master)
 
 Swift Validator is a rule-based validation library for Swift.
 
@@ -21,7 +21,13 @@ source 'https://github.com/CocoaPods/Specs.git'
 platform :ios, "8.1"
 
 use_frameworks!
-pod 'SwiftValidator', '3.0.3' 
+
+# As of 4.0.0, SwiftValidator has been extended beyond UITextField
+# Note: Installing 4.x.x will break code from 3.x.x
+pod 'SwiftValidator', :git => 'https://github.com/jpotts18/SwiftValidator.git', :tag => '4.0.0'
+
+# For older versions
+pod 'SwiftValidator', :git => 'https://github.com/jpotts18/SwiftValidator.git', :tag => '3.0.5'
 ```
 
 Install into your project:
@@ -83,7 +89,7 @@ Validate Fields on button tap or however you would like to trigger it.
 
 ```swift
 @IBAction func signupTapped(sender: AnyObject) {
-	validator.validate(delegate:self)
+	validator.validate(self)
 }
 ```
 
@@ -96,11 +102,13 @@ func validationSuccessful() {
 	// submit the form
 }
 
-func validationFailed(errors:[UITextField:ValidationError]) {
+func validationFailed(errors:[(Validatable ,ValidationError)]) {
 	// turn the fields to red
-	for (field, error) in validator.errors {
-		field.layer.borderColor = UIColor.redColor().CGColor
-		field.layer.borderWidth = 1.0
+	for (field, error) in errors {
+		if let field = field as? UITextField {
+			field.layer.borderColor = UIColor.redColor().CGColor
+			field.layer.borderWidth = 1.0		
+		}
 		error.errorLabel?.text = error.errorMessage // works if you added labels
 		error.errorLabel?.hidden = false
 	}
@@ -108,7 +116,7 @@ func validationFailed(errors:[UITextField:ValidationError]) {
 
 ```
 
-### Single Field Validation
+## Single Field Validation
 
 You may use single field validation in some cases. This could be useful in situations such as controlling responders:
 
@@ -126,7 +134,6 @@ func textFieldShouldReturn(textField: UITextField) -> Bool {
     return true
 }
 ```
-
 
 ## Custom Validation 
 
@@ -146,10 +153,15 @@ class SSNVRule: RegexRule {
 }
 ```
 
+## Documentation
+Checkout the docs <a href="http://jpotts18.github.io/SwiftValidator/">here</a> via [@jazzydocs](https://twitter.com/jazzydocs).
+
+
 Credits
 -------
 
-Swift Validator is written and maintained by Jeff Potter [@jpotts18](http://twitter.com/jpotts18).
+Swift Validator is written and maintained by Jeff Potter [@jpotts18](http://twitter.com/jpotts18). David Patterson [@dave_tw12](http://twitter.com/dave_tw12) actively works as a collaborator. Special thanks to [Deniz Adalar](https://github.com/dadalar) for
+adding validation beyond UITextField.
 
 ## Contributing
 
@@ -158,3 +170,4 @@ Swift Validator is written and maintained by Jeff Potter [@jpotts18](http://twit
 3. Commit your changes `git commit -am 'Add some feature'`
 4. Push to the branch `git push origin my-new-feature`
 5. Create a new Pull Request
+6. Make sure code coverage is at least 70%

@@ -8,16 +8,13 @@
 //
 
 #include "Shared/Platform/tvOS.xcconfig"
-#include "Shared/Product/Framework.xcconfig"
+#include "Shared/Product/DynamicFramework.xcconfig"
+#include "Version.xcconfig"
 
 PRODUCT_NAME = Bolts
 PRODUCT_BUNDLE_IDENTIFIER = com.bolts.tvos
 
-MACH_O_TYPE = mh_dylib
-DYLIB_INSTALL_NAME_BASE = @rpath
+INFOPLIST_FILE = $(SRCROOT)/Bolts/Resources/Info.plist
 
-DEFINES_MODULE = YES
-
-OTHER_LDFLAGS = $(inherited) -ObjC
-
-INFOPLIST_FILE = $(SRCROOT)/Bolts/Resources/tvOS-Info.plist
+// Use the 1.0.0 to avoid breaking changes with older version of Bolts.
+DYLIB_COMPATIBILITY_VERSION = 1
