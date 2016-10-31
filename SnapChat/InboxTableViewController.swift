@@ -17,14 +17,14 @@ class InboxTableViewController: UITableViewController {
     let SEGUE_SHOW_VIDEO = "showVideoSegue"
     let SEGUE_ON_LOGIN  = "onLoginSegue"
     
-    var messages = []
+    var messages:[PFObject] = []
     var selectedMessage:PFObject?
     
     var queryUtil:QueryUtil?
     
     var player:AVPlayer?
 
-    @IBAction func onLogout(sender: AnyObject) {
+    @IBAction func onLogout(_ sender: AnyObject) {
         //Synchronous LogOut
         UserUtil().logOut()
         //Go back to LogIn
@@ -33,13 +33,13 @@ class InboxTableViewController: UITableViewController {
     
     //MARK: - On Load
     
-    func goToView(identifier:String){
-        self.performSegueWithIdentifier(identifier, sender: self)
+    func goToView(_ identifier:String){
+        self.performSegue(withIdentifier: identifier, sender: self)
     }
     
     func onLoad(){
         //A. Check to see if the user is Logged In
-        if let currentUser = PFUser.currentUser() {
+        if let currentUser = PFUser.current() {
             //print("InboxTableViewController::onLoad", currentUser.username )
             //Initialize QueryUtil for messages
             queryUtil = QueryUtil()
@@ -50,12 +50,12 @@ class InboxTableViewController: UITableViewController {
         }
     }
     
-    func loadVideo(selectedMessage:PFObject){
+    func loadVideo(_ selectedMessage:PFObject){
         
-        let videoURL = selectedMessage.objectForKey(Messages.file) as! PFFile
-        let playerURL  = NSURL(string: videoURL.url!)
+        let videoURL = selectedMessage.object(forKey: Messages.file) as! PFFile
+        let playerURL  = URL(string: videoURL.url!)
         
-        player = AVPlayer(URL: playerURL!)
+        player = AVPlayer(url: playerURL!)
         player!.rate = 1
         player!.play()
         
@@ -67,23 +67,23 @@ class InboxTableViewController: UITableViewController {
     }
     
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         //A. Show activity monitor
         ActivityUtil.sharedInstance.showLoader(self.view)
         //B. Query any messages sent from my friends
         queryUtil?.query(Messages.className, key: Messages.recipientIds, orderBy: "createdAt")
     }
     
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         switch(segue.identifier){
         case SEGUE_ON_LOGIN?:
             //Clear the word "Back" from new users signin in
-            navigationItem.backBarButtonItem = UIBarButtonItem(title: "", style: .Plain, target: nil, action: nil)
+            navigationItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
             //Hide the "Back" button
             navigationItem.hidesBackButton = true
             break
         case SEGUE_SHOW_IMAGE?:
-            let vc = segue.destinationViewController as! ImageViewController
+            let vc = segue.destination as! ImageViewController
             //myLog(selectedMessage)
                 vc.thisMessage = selectedMessage
             break
@@ -91,14 +91,14 @@ class InboxTableViewController: UITableViewController {
             break
         }
         //Hide the tab controller
-        segue.destinationViewController.hidesBottomBarWhenPushed = true
+        segue.destination.hidesBottomBarWhenPushed = true
     }
 
     //MARK: - TableView
 
-    override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        selectedMessage = messages[indexPath.row] as! PFObject
-        let fileType = selectedMessage!.objectForKey(Messages.fileType) as! String
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        selectedMessage = messages[(indexPath as NSIndexPath).row] as! PFObject
+        let fileType = selectedMessage!.object(forKey: Messages.fileType) as! String
 
         switch fileType {
             case "video":
@@ -111,7 +111,7 @@ class InboxTableViewController: UITableViewController {
             break
         }
         
-        var recipientIds = NSMutableArray(array: (selectedMessage?.objectForKey(Messages.recipientIds))! as AnyObject as! [AnyObject])
+        var recipientIds = NSMutableArray(array: (selectedMessage?.object(forKey: Messages.recipientIds))! as AnyObject as! [AnyObject])
         
         if recipientIds.count == 1 {
             //Delete
@@ -121,29 +121,29 @@ class InboxTableViewController: UITableViewController {
         //Remove recipient and save
         else {
             myLog(recipientIds.count)
-            if let currentUser = PFUser.currentUser() {
-                recipientIds.removeObject(currentUser.objectId!)
+            if let currentUser = PFUser.current() {
+                recipientIds.remove(currentUser.objectId!)
                 selectedMessage?.saveInBackground()
                 myLog(recipientIds.count)
             }
         }
     }
     
-    override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
 
-        let cell = tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath)
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
         
-        let message = messages[indexPath.row] as! PFObject
-        cell.textLabel?.text = (message.objectForKey(Messages.senderName) as! String)
+        let message = messages[(indexPath as NSIndexPath).row] as! PFObject
+        cell.textLabel?.text = (message.object(forKey: Messages.senderName) as! String)
         
         return cell
     }
 
-    override func numberOfSectionsInTableView(tableView: UITableView) -> Int {
+    override func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
 
-    override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return messages.count
     }
     
@@ -156,16 +156,16 @@ class InboxTableViewController: UITableViewController {
 //MARK: Parse Query Delegate
 
 extension InboxTableViewController: QueryUtilDelegate{
-    func queryDidComplete(objects: NSArray) {
+    func queryDidComplete(_ objects: NSArray) {
         ActivityUtil.sharedInstance.hideLoader(self.view)
         if objects.count > 0 {
-            messages = objects
+            messages = objects as! [Any] as! [PFObject]
             self.tableView.reloadData()
         }
     }
-    func queryDidFail(message: String) {
+    func queryDidFail(_ message: String) {
         ActivityUtil.sharedInstance.hideLoader(self.view)
-        AlertUtil.sharedInstance.show(AlertUtilType.ERROR, title: "Error", message: message, sender: self)
+        AlertUtil.sharedInstance.show(AlertUtilType.error, title: "Error", message: message, sender: self)
     }
     
 }

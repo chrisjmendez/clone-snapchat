@@ -26,11 +26,11 @@ class FriendsTableViewController: UITableViewController {
     let NUMBER_OF_SECTIONS  = 1
     
     var friendUtil:FriendUtil?
-    var friends = []
+    var friends:[PFUser] = []
 
     
-    @IBAction func onEdit(sender: AnyObject) {
-        self.performSegueWithIdentifier(SEGUE_EDIT_FRIENDS, sender: sender)
+    @IBAction func onEdit(_ sender: AnyObject) {
+        self.performSegue(withIdentifier: SEGUE_EDIT_FRIENDS, sender: sender)
     }
     
     func onLoad(){
@@ -39,35 +39,35 @@ class FriendsTableViewController: UITableViewController {
         friendUtil?.delegate = self
     }
     
-    func dynamicallyCreateCell(index:Int) -> UITableViewCell{
+    func dynamicallyCreateCell(_ index:Int) -> UITableViewCell{
         let thisUser:PFUser = self.friends[index] as! PFUser
 
         let reuseIdentifier = "Cell"
         
-        var cell = tableView.dequeueReusableCellWithIdentifier(reuseIdentifier) as UITableViewCell!
+        var cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier) as UITableViewCell!
         
         if cell == nil {
-            cell = UITableViewCell(style:.Default, reuseIdentifier: reuseIdentifier)
+            cell = UITableViewCell(style:.default, reuseIdentifier: reuseIdentifier)
         }
         
-        cell.textLabel?.text = thisUser.username
-        cell.backgroundColor = UIColor.clearColor()
+        cell?.textLabel?.text = thisUser.username
+        cell?.backgroundColor = UIColor.clear
         //cell.accessoryType   = UITableViewCellAccessoryType.DetailDisclosureButton
-        cell.selectionStyle  = UITableViewCellSelectionStyle.Default
+        cell?.selectionStyle  = UITableViewCellSelectionStyle.default
         //cell.imageView.image = createThumbnail("")
         
-        return cell
+        return cell!
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
     }
     
-    override func viewWillAppear(animated: Bool) {
+    override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
     }
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
         onLoad()
@@ -75,24 +75,24 @@ class FriendsTableViewController: UITableViewController {
 
     // MARK: - Table view data source
     
-    override func numberOfSectionsInTableView(tableView: UITableView) -> Int {
+    override func numberOfSections(in tableView: UITableView) -> Int {
         return NUMBER_OF_SECTIONS
     }
 
-    override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return self.friends.count
     }
     
-    override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        return dynamicallyCreateCell(indexPath.row)
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        return dynamicallyCreateCell((indexPath as NSIndexPath).row)
     }
 
     //MARK: - Pass friends:Array  to EditFriendsViewController
     
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == SEGUE_EDIT_FRIENDS {
             //Pass Array from one view to the next
-            let vc = segue.destinationViewController as! EditFriendsTableViewController
+            let vc = segue.destination as! EditFriendsTableViewController
                 vc.friends = self.friends as! [PFUser]
         }
     }
@@ -101,15 +101,15 @@ class FriendsTableViewController: UITableViewController {
 //MARK: - Friends
 
 extension FriendsTableViewController: FriendUtilDelegate{
-    func relationshipDidComplete(users: NSArray) {
+    func relationshipDidComplete(_ users: NSArray) {
         ActivityUtil.sharedInstance.hideLoader(self.view)
         //myLog(users)
-        self.friends = users //(users as! [PFUser])
+        self.friends = users as! [Any] as! [PFUser] //(users as! [PFUser])
         self.tableView.reloadData()
     }
-    func relationshipDidFail(message: String) {
+    func relationshipDidFail(_ message: String) {
         //myLog(message)
         ActivityUtil.sharedInstance.hideLoader(self.view)
-        AlertUtil.sharedInstance.show(AlertUtilType.ERROR, title: "Error", message: message, sender: self)
+        AlertUtil.sharedInstance.show(AlertUtilType.error, title: "Error", message: message, sender: self)
     }
 }

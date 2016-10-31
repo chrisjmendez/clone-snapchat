@@ -20,7 +20,7 @@ class LoginViewController: UIViewController {
     @IBOutlet weak var passwordTextField: UITextField!
     @IBOutlet weak var passwordErrorLabel: UILabel!
     
-    @IBAction func onLogin(sender: AnyObject) {
+    @IBAction func onLogin(_ sender: AnyObject) {
         validator.validate(self)
     }
     
@@ -35,15 +35,15 @@ class LoginViewController: UIViewController {
     
     func goToView(){
         let delay = 1.0
-        Async.main(after: delay, block: { () -> Void in
-            self.navigationController?.popToRootViewControllerAnimated(true)
+        Async.main(after: delay, { () -> Void in
+            self.navigationController?.popToRootViewController(animated: true)
         })
     }
     
     func logIn(){
-        let charSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
-        let user    = self.emailTextField.text?.stringByTrimmingCharactersInSet(charSet)
-        let pass    = self.passwordTextField.text?.stringByTrimmingCharactersInSet(charSet)
+        let charSet = CharacterSet.whitespacesAndNewlines
+        let user    = self.emailTextField.text?.trimmingCharacters(in: charSet)
+        let pass    = self.passwordTextField.text?.trimmingCharacters(in: charSet)
         
         ActivityUtil.sharedInstance.showLoader(self.view)
         
@@ -58,7 +58,7 @@ class LoginViewController: UIViewController {
         onLoad()
     }
     
-    override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         view.endEditing(true)
     }
 }
@@ -74,24 +74,33 @@ extension LoginViewController:UserUtilDelegate{
         ActivityUtil.sharedInstance.hideLoader(self.view)
         goToView()
     }
-    func didFail(message: String) {
+    func didFail(_ message: String) {
         ActivityUtil.sharedInstance.hideLoader(self.view)
-        AlertUtil.sharedInstance.show(AlertUtilType.ERROR, title: "Login Failed", message: message, sender: self)
+        AlertUtil.sharedInstance.show(AlertUtilType.error, title: "Login Failed", message: message, sender: self)
     }
 }
 
 //MARK: - Validation Delegate
 extension LoginViewController:ValidationDelegate{
+    /**
+     This method will be called on delegate object when validation fails.
+     
+     - returns: No return value.
+     */
+    public func validationFailed(_ errors: [(Validatable, ValidationError)]) {
+        for (field, error) in validator.errors {
+        }
+    }
+
     func validationSuccessful() {
         logIn()
     }
     
-    func validationFailed(errors: [UITextField : ValidationError]) {
+    func validationFailed(_ errors: [UITextField : ValidationError]) {
         for (field, error) in validator.errors {
-            field.layer.borderColor = UIColor.redColor().CGColor
-            field.layer.borderWidth = 1.0
+            //field.layer.borderColor = UIColor.redColor.CGColor
             error.errorLabel?.text = error.errorMessage // works if you added labels
-            error.errorLabel?.hidden = false
+            error.errorLabel?.isHidden = false
         }
     }
 }

@@ -16,26 +16,26 @@ class ImageViewController: UIViewController {
     
     @IBOutlet weak var imageView: UIImageView!
     
-    private func onLoad(){
-        let imageFile = thisMessage?.objectForKey(Messages.file) as! PFFile
-        let imageFileURL = NSURL(string: imageFile.url!)
-        let imageData = NSData(contentsOfURL: imageFileURL!)
+    fileprivate func onLoad(){
+        let imageFile = thisMessage?.object(forKey: Messages.file) as! PFFile
+        let imageFileURL = URL(string: imageFile.url!)
+        let imageData = try? Data(contentsOf: imageFileURL!)
         imageView.image = UIImage(data: imageData!)
         
-        let senderName = self.thisMessage?.objectForKey("senderName") as? String
+        let senderName = self.thisMessage?.object(forKey: "senderName") as? String
         self.navigationItem.title = "Sent from \(senderName)"
     }
     
     func timerStart(){
-        if self.respondsToSelector("timerStop") {
-            NSTimer.scheduledTimerWithTimeInterval(3.0, target: self, selector: "timerStop", userInfo: nil, repeats: false)
+        if self.responds(to: #selector(ImageViewController.timerStop)) {
+            Timer.scheduledTimer(timeInterval: 3.0, target: self, selector: #selector(ImageViewController.timerStop), userInfo: nil, repeats: false)
         } else {
             myLog("Error")
         }
     }
     
     func timerStop(){
-        self.navigationController?.popViewControllerAnimated(true)
+        self.navigationController?.popViewController(animated: true)
     }
     
     override func viewDidLoad() {
@@ -43,7 +43,7 @@ class ImageViewController: UIViewController {
         onLoad()
     }
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         timerStart()

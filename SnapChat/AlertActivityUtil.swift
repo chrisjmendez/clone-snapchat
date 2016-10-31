@@ -19,14 +19,14 @@ protocol AlertUtilDelegate{
 }
 
 enum AlertUtilType:Int {
-    case ERROR   = 0
-    case SUCCESS = 1
+    case error   = 0
+    case success = 1
 }
 
 class AlertUtil {
     
     static let sharedInstance = AlertUtil()
-    private init(){}
+    fileprivate init(){}
 
     var delegate:AlertUtilDelegate?
     
@@ -34,13 +34,13 @@ class AlertUtil {
         delegate?.didFinish()
     }
     
-    func show(type:AlertUtilType , title:String, message:String, sender:UIViewController){
+    func show(_ type:AlertUtilType , title:String, message:String, sender:UIViewController){
         switch(type){
-            case AlertUtilType.SUCCESS:
+            case AlertUtilType.success:
                 let alert = JSSAlertView().success(sender, title: title, text: message)
                     alert.addAction(onTap)
                 break
-            case AlertUtilType.ERROR:
+            case AlertUtilType.error:
                 let alert = JSSAlertView().danger(sender, title: title, text: message)
                     alert.addAction(onTap)
                 break
@@ -52,40 +52,40 @@ class AlertUtil {
 class ActivityUtil {
     
     static let sharedInstance = ActivityUtil()
-    private init(){}
+    fileprivate init(){}
     
     var activityMonitor:MBProgressHUD?
 
-    func hideLoader(view:UIView){
+    func hideLoader(_ view:UIView){
         Async.main{ () -> Void in
-            MBProgressHUD.hideAllHUDsForView(view, animated: true)
+            MBProgressHUD.hideAllHUDs(for: view, animated: true)
         }
     }
     
-    func updateLoader(progress:Float){
+    func updateLoader(_ progress:Float){
         self.activityMonitor!.progress = progress
     }
     
-    func showProgressLoader(view:UIView){
-        Async.main(block: { () -> Void in
-            self.activityMonitor = MBProgressHUD.showHUDAddedTo(view, animated: true)
+    func showProgressLoader(_ view:UIView){
+        Async.main {
+            self.activityMonitor = MBProgressHUD.showAdded(to: view, animated: true)
             self.activityMonitor!.labelText = "Uploading"
             self.activityMonitor!.detailsLabelText = ""
             self.activityMonitor!.show(true)
-            self.activityMonitor!.mode = MBProgressHUDMode.AnnularDeterminate
+            self.activityMonitor!.mode = MBProgressHUDMode.annularDeterminate
             view.addSubview(self.activityMonitor!)
-        })
+        }
     }
     
     
-    func showLoader(view:UIView, label:String="Loading", message:String="Updating"){
-        Async.main(block: { () -> Void in
-           self.activityMonitor = MBProgressHUD.showHUDAddedTo(view, animated: true)
+    func showLoader(_ view:UIView, label:String="Loading", message:String="Updating"){
+        Async.main{
+           self.activityMonitor = MBProgressHUD.showAdded(to: view, animated: true)
            self.activityMonitor!.labelText = label
            self.activityMonitor!.detailsLabelText = message
            self.activityMonitor!.show(true)
-           self.activityMonitor!.mode = .Indeterminate
+           self.activityMonitor!.mode = .indeterminate
            view.addSubview(self.activityMonitor!)
-        })
+        }
     }
 }

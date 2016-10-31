@@ -13,12 +13,12 @@ import Foundation
 
 class LogUtil {
     static let sharedInstance = LogUtil()
-    private init() {} //This prevents others from using the default '()' initializer for this class.
+    fileprivate init() {} //This prevents others from using the default '()' initializer for this class.
 }
 
 extension NSObject{
-    func myLog<T>( object: T, _ file: String = __FILE__, _ function: String = __FUNCTION__, _ line: Int = __LINE__) {
-        let info = "\(self.dynamicType).\(function)[\(line)]:\(object)"
+    func myLog<T>( _ object: T, _ file: String = #file, _ function: String = #function, _ line: Int = #line) {
+        let info = "\(type(of: self)).\(function)[\(line)]:\(object)"
         print(info)
     }
 }

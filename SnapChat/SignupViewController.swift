@@ -22,7 +22,7 @@ class SignupViewController: UIViewController {
     @IBOutlet weak var passwordTextField: UITextField!
     @IBOutlet weak var passwordErrorLabel: UILabel!
     
-    @IBAction func onSignUp(sender: AnyObject) {
+    @IBAction func onSignUp(_ sender: AnyObject) {
         validator.validate(self)
     }
 
@@ -34,8 +34,8 @@ class SignupViewController: UIViewController {
     //MARK: - Transitions
     func goToView(){
         let delay = 1.0
-        Async.main(after: delay, block: { () -> Void in
-            self.navigationController?.popToRootViewControllerAnimated(true)
+        Async.main(after: delay, { () -> Void in
+            self.navigationController?.popToRootViewController(animated: true)
         })
     }
     
@@ -43,9 +43,9 @@ class SignupViewController: UIViewController {
     func createUser(){
         ActivityUtil.sharedInstance.showLoader(self.view)
 
-        let charSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
-        let user    = self.emailTextField.text?.stringByTrimmingCharactersInSet(charSet)
-        let pass    = self.passwordTextField.text?.stringByTrimmingCharactersInSet(charSet)
+        let charSet = CharacterSet.whitespacesAndNewlines
+        let user    = self.emailTextField.text?.trimmingCharacters(in: charSet)
+        let pass    = self.passwordTextField.text?.trimmingCharacters(in: charSet)
 
         userUtil = UserUtil()
         userUtil?.delegate = self
@@ -58,23 +58,31 @@ class SignupViewController: UIViewController {
         onLoad()
     }
     
-    override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         view.endEditing(true)
     }
 }
 
 //MARK: - Validation Delegate
 extension SignupViewController:ValidationDelegate{
+    /**
+     This method will be called on delegate object when validation fails.
+     
+     - returns: No return value.
+     */
+    public func validationFailed(_ errors: [(Validatable, ValidationError)]) {
+        print("validationFailed")
+    }
+
     func validationSuccessful() {
         createUser()
     }
     
-    func validationFailed(errors: [UITextField : ValidationError]) {
+    func validationFailed(_ errors: [UITextField : ValidationError]) {
         for (field, error) in validator.errors {
-            field.layer.borderColor = UIColor.redColor().CGColor
-            field.layer.borderWidth = 1.0
+            //field.layer.borderColor = UIColor.redColor.CGColor
             error.errorLabel?.text = error.errorMessage // works if you added labels
-            error.errorLabel?.hidden = false
+            error.errorLabel?.isHidden = false
         }
     }
 }
@@ -86,8 +94,8 @@ extension SignupViewController:UserUtilDelegate{
         goToView()
     }
 
-    func didFail(message:String) {
+    func didFail(_ message:String) {
         ActivityUtil.sharedInstance.hideLoader(self.view)
-        AlertUtil.sharedInstance.show(AlertUtilType.ERROR, title: "Registration Error", message: message, sender: self)
+        AlertUtil.sharedInstance.show(AlertUtilType.error, title: "Registration Error", message: message, sender: self)
     }
 }

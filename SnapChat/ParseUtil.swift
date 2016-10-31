@@ -9,40 +9,61 @@
 import UIKit
 import Parse
 
+fileprivate func < <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
+  switch (lhs, rhs) {
+  case let (l?, r?):
+    return l < r
+  case (nil, _?):
+    return true
+  default:
+    return false
+  }
+}
+
+fileprivate func > <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
+  switch (lhs, rhs) {
+  case let (l?, r?):
+    return l > r
+  default:
+    return rhs < lhs
+  }
+}
+
+
 //MARK: - Parse Registration
 
 @objc protocol UserUtilDelegate {
-    optional func didSignUp()
-    optional func didSignIn()
-    optional func didSignOut()
-    optional func didForgot()
-    optional func didFail(message:String)
+    @objc optional func didSignUp()
+    @objc optional func didSignIn()
+    @objc optional func didSignOut()
+    @objc optional func didForgot()
+    @objc optional func didFail(_ message:String)
 }
 
 class UserUtil {
-    
     var delegate:UserUtilDelegate?
 
-    func signUp(username:String, password:String){
+    func signUp(_ username:String, password:String){
         let user = PFUser()
             user.username = username
             user.email    = username
             user.password = password
-            user.signUpInBackgroundWithBlock { (success, error) -> Void in
+            user.signUpInBackground { (success, error) -> Void in
                 if success == true {
                     self.delegate?.didSignUp!()
                 } else {
-                    self.delegate?.didFail!( (error?.userInfo["error"] as! String) )
+                    self.delegate?.didFail!("Sign up error")
                 }
         }
     }
     
-    func signIn(username:String, password:String){
-        PFUser.logInWithUsernameInBackground(username, password: password) { (parseUser, error) -> Void in
+    func signIn(_ username:String, password:String){
+        PFUser.logInWithUsername(inBackground: username, password: password) { (parseUser, error) -> Void in
             if parseUser != nil {
                 self.delegate?.didSignIn!()
             } else {
-                self.delegate?.didFail!( (error?.userInfo["error"] as! String) )
+                //let error = error?._userInfo["error"] as! String
+                self.delegate?.didFail!( "Sign in error" )
             }
         }
     }
@@ -64,15 +85,15 @@ class UserUtil {
         Parse.setApplicationId(Config.parse.APPLICATION_ID, clientKey: Config.parse.CLIENT_ID)
         
         let object = ["appVersion":0.9]
-        PFAnalytics.trackAppOpenedWithLaunchOptions(object)
+        PFAnalytics.trackAppOpened(launchOptions: object)
     }
 }
 
 //MARK: - Parse Friendships
 
 protocol FriendUtilDelegate {
-    func relationshipDidComplete(users:NSArray)
-    func relationshipDidFail(message:String)
+    func relationshipDidComplete(_ users:NSArray)
+    func relationshipDidFail(_ message:String)
 }
 
 class FriendUtil: QueryUtilDelegate {
@@ -92,27 +113,28 @@ class FriendUtil: QueryUtilDelegate {
     //Source: FirnedsTableViewController
     func updateFriendships(){
         //A. Get the currentUser who is logged in
-        let currentUser = PFUser.currentUser()
+        let currentUser = PFUser.current()
         //B. Get the currentUser's list friends from Parse
-        let relation = currentUser?.objectForKey( KEY_FRIEND_RELATION ) as? PFRelation
+        let relation = currentUser?.object( forKey: KEY_FRIEND_RELATION ) as? PFRelation
         //C. Create a new query of the currentUser's friends
         let query = relation?.query()
-            query?.orderByAscending("username")
+            query?.order(byAscending: "username")
             //D. Make the query
-            query?.findObjectsInBackgroundWithBlock({ (objects, error) -> Void in
+            query?.findObjectsInBackground(block: { (objects, error) -> Void in
                if error != nil {
-                    self.delegate?.relationshipDidFail( (error?.userInfo["error"] as! String) )
+                    //let e = (error?._userInfo["error"] as! String)
+                    self.delegate?.relationshipDidFail( "Update Error" )
                 } else {
                     //E. Update the tableView
-                    self.delegate?.relationshipDidComplete(objects!)
+                    self.delegate?.relationshipDidComplete(objects! as NSArray)
                 }
             })
     }
     
-    func queryDidComplete(users: NSArray) {
+    func queryDidComplete(_ users: NSArray) {
         self.delegate?.relationshipDidComplete(users)
     }
-    func queryDidFail(message: String) {
+    func queryDidFail(_ message: String) {
         self.delegate?.relationshipDidFail(message)
     }
 }
@@ -120,35 +142,36 @@ class FriendUtil: QueryUtilDelegate {
 //MARK: - Parse Queries
 
 protocol QueryUtilDelegate {
-    func queryDidComplete(objects:NSArray)
-    func queryDidFail(message:String)
+    func queryDidComplete(_ objects:NSArray)
+    func queryDidFail(_ message:String)
 }
 
 class QueryUtil {
     var delegate:QueryUtilDelegate?
     
-    func query(className:String, key:String, orderBy:String="username"){
+    func query(_ className:String, key:String, orderBy:String="username"){
         let query = PFQuery(className: className)
-            query.whereKey(key, equalTo: (PFUser.currentUser()?.objectId)!)
-            query.orderByDescending(orderBy)
-            query.findObjectsInBackgroundWithBlock { (objects, error) -> Void in
+            query.whereKey(key, equalTo: (PFUser.current()?.objectId)!)
+            query.order(byDescending: orderBy)
+            query.findObjectsInBackground { (objects, error) -> Void in
                 if error != nil{
                     self.delegate?.queryDidFail((error?.localizedDescription)!)
                 } else {
-                    self.delegate?.queryDidComplete(objects!)
+                    self.delegate?.queryDidComplete(objects! as NSArray)
                 }
             }
     }
     
     func queryUsers(){
         let query = PFUser.query()
-            query?.orderByAscending("username")
-            query?.findObjectsInBackgroundWithBlock({ (objects, error) -> Void in
+            query?.order(byAscending: "username")
+            query?.findObjectsInBackground(block: { (objects, error) -> Void in
                 if error != nil {
-                    self.delegate?.queryDidFail("Oh oh, there seems to be an error. " + (error?.userInfo["error"] as! String))
+                    //let e = (error?._userInfo["error"] as! String)
+                    self.delegate?.queryDidFail("Oh oh, there seems to be an error. ")
                 }
                 else if objects?.count > 0 {
-                    self.delegate?.queryDidComplete(objects!)
+                    self.delegate?.queryDidComplete(objects! as NSArray)
                 }
                 else {
                     self.delegate?.queryDidFail("Friends not found.")
